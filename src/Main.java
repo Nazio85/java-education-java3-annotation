@@ -80,8 +80,10 @@ public class Main {
                         }
                     } else if (entry.getValue() instanceof Integer) {
                         int priority = (Integer) entry.getValue();
-                        if (count == priority & fullMap != tmpMap.size()) {
-                            invokeMethod(tmpMap, object, entry);
+                        if (fullMap != tmpMap.size()) {
+                            if (count == priority) invokeMethod(tmpMap, object, entry);
+                        } else if (!map.containsValue(BEFORE_SUITE)){
+                            if (count == priority) invokeMethod(tmpMap, object, entry);
                         }
                     }
 
