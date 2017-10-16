@@ -8,8 +8,14 @@ public class Cat {
     }
 
     @Test(priority = 1)
-    public String getName() {
-        System.out.println("Cat name " + name);
+    public String eat() {
+        System.out.println("Кот " + name + " пошел есть");
+        return name;
+    }
+
+    @Test(priority = 0)
+    public String tighten() {
+        System.out.println("Кот " + name + " подтянулся");
         return name;
     }
 
@@ -19,11 +25,11 @@ public class Cat {
 
     @BeforeSuite
     public void prepareMethod(){
-        System.out.println("Что то подготавливаю");
+        System.out.println("Кот " + name + " проснулся!");
     }
 
     @AfterSuite
     public void endMethod (){
-        System.out.println("закрытие программы");
+        System.out.println("Кот " + name + " пошел спать.");
     }
 }

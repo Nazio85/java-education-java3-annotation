@@ -1,11 +1,11 @@
-import com.sun.xml.internal.ws.server.provider.ProviderInvokerTube;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.BrokenBarrierException;
 
 public class Main {
+    public static final String BEFORE_SUITE = "BeforeSuite";
+    public static final String AFTER_SUITE = "AfterSuite";
 
 //      Создать класс, который может выполнять «тесты», в качестве тестов выступают классы
 //      с наборами методов с аннотациями @Test. Для этого у него должен быть статический метод
@@ -21,61 +21,87 @@ public class Main {
 //      то есть проект пишется с нуля)
 
     public static void main(String[] args) {
-
-        Class cat = Cat.class;
+        Cat barsik = new Cat("Matroskin", 4);
+        Dog barbos = new Dog("Barbos", 7);
 
         try {
-            start(cat);
+            start(barsik);
+            start(barbos);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void start(Class cl) throws InvocationTargetException, IllegalAccessException, BrokenBarrierException, InterruptedException {
-        Cat barsik = new Cat("Barsik", 4);
-        List<Method> beforeListMethod = new ArrayList<>();
-        List<Method> afterListMethod = new ArrayList<>();
-        Map<Method, Integer> testListMethod = new HashMap<>();
 
+    private static void start(Object object) throws InvocationTargetException, IllegalAccessException {
+        Class cl = object.getClass();
+
+        Map map = new HashMap();
 
         for (Method method : cl.getDeclaredMethods()) {
 
             if (method.isAnnotationPresent(BeforeSuite.class)) {
-                if (beforeListMethod.size() > 0) {
+                if (map.containsValue(BEFORE_SUITE)) {
                     throw new RuntimeException();
                 } else {
-                    beforeListMethod.add(method);
+                    map.put(method, BEFORE_SUITE);
                 }
             }
             if (method.isAnnotationPresent(Test.class)) {
-                testListMethod.put(method, method.getAnnotation(Test.class).priority());
+                map.put(method, method.getAnnotation(Test.class).priority());
             }
 
             if (method.isAnnotationPresent(AfterSuite.class)) {
-                if (afterListMethod.size() > 0) {
+                if (map.containsValue(AFTER_SUITE)) {
                     throw new RuntimeException();
                 } else {
-                    afterListMethod.add(method);
+                    map.put(method, AFTER_SUITE);
                 }
             }
         }
 
-
-        invokeMethod(testListMethod, barsik);
+        readMap(cl, map, object);
     }
 
-    private static void invokeMethod(Map<Method, Integer> map, Object object) throws InvocationTargetException, IllegalAccessException {
+    private static <KEY, VALUE> void readMap(Class cl, Map<KEY, VALUE> map, Object object) throws InvocationTargetException, IllegalAccessException {
         int count = 0;
         boolean tmp = true;
-        while (tmp) {
-            for (Map.Entry<Method, Integer> entry : map.entrySet()) {
-                if (entry.getValue() == count) {
-                    entry.getKey().invoke(object);
-                    map.remove(entry.getKey());
-                } else count++;
+        int fullMap = map.size();
+        Map<KEY, VALUE> tmpMap = new HashMap<>(map);
 
-                if (map.size() == 0) tmp = false;
+        try {
+            while (tmp) {
+                for (Map.Entry<KEY, VALUE> entry : map.entrySet()) {
+                    if (entry.getValue() instanceof String) {
+                        if (entry.getValue().equals(BEFORE_SUITE) & tmpMap.size() == fullMap) {
+                            invokeMethod(tmpMap, object, entry);
+                        } else if (entry.getValue().equals(AFTER_SUITE) & tmpMap.size() == 1) {
+                            invokeMethod(tmpMap, object, entry);
+                        }
+                    } else if (entry.getValue() instanceof Integer) {
+                        int priority = (Integer) entry.getValue();
+                        if (count == priority & fullMap != tmpMap.size()) {
+                            invokeMethod(tmpMap, object, entry);
+                        }
+                    }
+
+                    if (tmpMap.size() == 0) {
+                        tmp = false;
+                        break;
+                    }
+                }
+                count++;
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Object is not supported");
         }
+
+    }
+
+    private static <KEY, VALUE> void invokeMethod(Map<KEY, VALUE> map, Object object, Map.Entry<KEY, VALUE> entry) throws IllegalAccessException, InvocationTargetException {
+        Method method = (Method) entry.getKey();
+        method.invoke(object);
+        map.remove(entry.getKey());
     }
 }
